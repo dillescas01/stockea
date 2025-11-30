@@ -1,0 +1,60 @@
+{
+  "best_model": "ExtraTrees",
+  "horizon": 7,
+  "folds": null,
+  "input_path": "/Users/johar/Desktop/Desarrollo/proyecto_dpd/data/1_bronze/osa_hist_Tambo_UTEC.xlsx",
+  "output_forecast": "/Users/johar/Desktop/Desarrollo/proyecto_dpd/data/1_bronze/forecast/forecast_UTEC_7d_best.xlsx",
+  "output_silver_history": "/Users/johar/Desktop/Desarrollo/proyecto_dpd/data/2_silver/osa_hist_Tambo_UTEC_with_forecast.xlsx",
+  "output_backtest_csv": null,
+  "generated_rows": 7,
+  "top_features": [
+    {
+      "feature": "dow_sin",
+      "importance": 0.32271029291603087
+    },
+    {
+      "feature": "dow_cos",
+      "importance": 0.2877930054591971
+    },
+    {
+      "feature": "disp_lag2",
+      "importance": 0.04920930785823531
+    },
+    {
+      "feature": "esp_lag1",
+      "importance": 0.049175494287253894
+    },
+    {
+      "feature": "disp_lag3",
+      "importance": 0.048138978150119784
+    },
+    {
+      "feature": "esp_lag7",
+      "importance": 0.04627943866558211
+    },
+    {
+      "feature": "esp_lag14",
+      "importance": 0.04513732847341699
+    },
+    {
+      "feature": "disp_lag1",
+      "importance": 0.04256166059646919
+    },
+    {
+      "feature": "disp_lag14",
+      "importance": 0.04159331128538572
+    },
+    {
+      "feature": "disp_lag7",
+      "importance": 0.03881732035410413
+    },
+    {
+      "feature": "disp_roll7_std",
+      "importance": 0.010544546391566236
+    },
+    {
+      "feature": "esp_roll7_mean",
+      "importance": 0.009272344537002404
+    }
+  ]
+}

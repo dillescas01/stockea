@@ -1,0 +1,10 @@
+# Ignorar entorno virtual (las librerías pesadas)
+proy_dpd/
+__pycache__/
+*.pyc
+
+# Ignorar datasets grandes comprimidos
+data/*.zip
+
+# Ignorar archivos del sistema
+.DS_Store
