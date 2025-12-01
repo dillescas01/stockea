@@ -80,7 +80,7 @@ La solución se materializa en una interfaz web unificada (`app.py`) desarrollad
 
 ---
 
-## 📊 Especificaciones de Datos y Resultados (Rúbrica Parte 2)
+## 📊 Especificaciones de Datos y Resultados 
 
 ### 4. Diccionario de Datos (Data Dictionary)
 El flujo de datos sigue una arquitectura de medallones estricta. A continuación se detallan los esquemas de los archivos generados.
