@@ -49,7 +49,7 @@ El proyecto se fundamenta en investigaciones previas sobre automatización en re
 
 La arquitectura sigue una estrategia de **Medallones (Bronze $\to$ Silver $\to$ Gold)** para garantizar la calidad del dato.
 
-![Diagrama de Flujo del Proyecto](image_872db2.png)
+![Diagrama de Flujo del Proyecto](image.png)
 
 1.  **Input Visual:** Captura de imagen de la góndola.
 2.  **Procesamiento:** Detección de productos (YOLO).
