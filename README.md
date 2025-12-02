@@ -1,9 +1,8 @@
 source proy_dpd/bin/activate
-
 # 🛒 Smart Retail: Sistema Integral de Gestión de Góndolas
 > **Detección de Objetos (OSA) | Predicción de Demanda | Ruteo Inteligente**
 
-Este proyecto implementa una solución *end-to-end* para optimizar la gestión de inventario en tiendas minoristas (caso de uso: Tiendas Tambo). El sistema automatiza la auditoría de estanterías mediante visión por computadora, predice quiebres de stock futuros y genera rutas de visita optimizadas para los gestores de campo.
+Este proyecto implementa una solución para optimizar la gestión de inventario en tiendas minoristas (caso de uso: Tiendas Tambo). El sistema automatiza la auditoría de estanterías mediante visión por computadora, predice quiebres de stock futuros y genera rutas de visita optimizadas para los gestores de campo.
 
 ---
 
@@ -45,11 +44,12 @@ El proyecto se fundamenta en investigaciones previas sobre automatización en re
 
 ---
 
-## 🔄 Arquitectura y Flujo del Proyecto
+##  Arquitectura y Flujo del Proyecto
 
-La arquitectura sigue una estrategia de **Medallones (Bronze $\to$ Silver $\to$ Gold)** para garantizar la calidad del dato.
+La arquitectura sigue una estrategia para garantizar la calidad del dato desde la captura hasta la toma de decisión.
 
-![Diagrama de Flujo del Proyecto](image.png)
+![Diagrama de Flujo del Proyecto](image-1.png)
+*Figura 1: Pipeline de datos desde la captura visual hasta la optimización logística.*
 
 1.  **Input Visual:** Captura de imagen de la góndola.
 2.  **Procesamiento:** Detección de productos (YOLO).
@@ -59,116 +59,106 @@ La arquitectura sigue una estrategia de **Medallones (Bronze $\to$ Silver $\to$ 
 
 ---
 
-## 📝 Desarrollo por Etapas 
+## 📝 Documentation & Report: Process Details
+
+A continuación se detalla el proceso técnico completo (Data Wrangling, Modeling, Prototyping) implementado en el código fuente.
+
 ### 1. Data Wrangling (Ingeniería de Datos)
-* **Generación:** Diccionario maestro `stores_meta.py` y simulación histórica con estacionalidad semanal (`generar_hist_osa_sintetica_clean.py`).
-* **Enriquecimiento:** Creación de *lags* (t-1, t-7) y medias móviles en `forecast_utec.py`.
-* **Consolidación:** Integración de reglas de negocio (Estratos) en `genera_data_dummy.py`.
+* **Generación y Simulación (Capa Bronze):**
+    * Se estructuró un diccionario maestro `stores_meta.py` que actúa como fuente de verdad para IDs, coordenadas y capacidades de planograma.
+    * Ante la falta de históricos reales extensos, el script `generar_hist_osa_sintetica_clean.py` genera series de tiempo diarias simuladas desde enero 2024, aplicando factores de estacionalidad semanal (`DOW_MULT`) para emular el comportamiento real de compra.
 
-### 2. Modeling (Modelado)
-* **Visión (YOLO):** Modelo entrenado para conteo agnóstico de objetos (`nc: 1`).
-* **Forecast:** `ExtraTreesRegressor` con estrategia MultiOutput para predecir 7 días simultáneos, aplicando restricciones de capacidad.
-* **Ruteo:** Algoritmo híbrido (Exacto/Heurístico) que minimiza la distancia ponderada por urgencia.
+* **Enriquecimiento (Capa Silver):**
+    * En `forecast_utec.py`, se transforman los datos crudos mediante *Feature Engineering*:
+        * **Lags:** Valores pasados (t-1, t-7, t-14).
+        * **Rolling Statistics:** Medias móviles de 7 días.
+        * **Encoding Temporal:** Transformación cíclica (Seno/Coseno) del día de la semana.
 
-### 3. Prototyping (Aplicación)
-La solución se materializa en una interfaz web unificada (`app.py`) desarrollada con **Streamlit**.
+* **Consolidación (Capa Gold):**
+    * El script `genera_data_dummy.py` unifica el histórico real con las predicciones del modelo. Se integra la segmentación estratégica (Estratos A, B, C, D) para alimentar el algoritmo de prioridad.
 
-| Dashboard de Ruteo Geoespacial | Análisis y Proyección de Datos |
+### 2. Modeling (Modelado y Algoritmos)
+* **Visión Computacional (YOLO):**
+    * Modelo entrenado para conteo agnóstico de objetos (`nc: 1`) utilizando el dataset `bbox-retail`. Se filtra por umbral de confianza para reducir falsos positivos.
+    * **Métrica OSA:** $OSA \% = (\text{Productos Detectados} / \text{Capacidad Planograma}) \times 100$.
+
+* **Forecasting (Predicción):**
+    * Modelo: `ExtraTreesRegressor` con estrategia `MultiOutputRegressor` para predecir 7 días simultáneos.
+    * Restricciones: Se aplica *clipping* para que la predicción no supere la capacidad física de la góndola.
+
+* **Ruteo Inteligente (Optimización):**
+    * **Función de Prioridad:** $Prioridad = 0.6(1 - OSA) + 0.3(Estrato) + 0.1(Gap)$.
+    * **Algoritmo:** Híbrido. Intenta una solución exacta con `Pyomo` (MTZ formulation) y hace fallback a una heurística *Greedy + 2-opt* si no hay solver disponible.
+
+### 3. Prototyping (Aplicación Web)
+La solución se materializa en una interfaz unificada desarrollada con **Streamlit** (`app.py`), dividida en módulos funcionales.
+
+| Módulo de Ruteo Geoespacial | Análisis de Métricas y Forecast |
 | :---: | :---: |
-| ![Interfaz Ruteo](image_872619.png) | ![Análisis Data](image_86d39c.png) |
-| *Visualización táctica de tiendas críticas (Rojo).* | *Detalle de métricas de disponibilidad.* |
+| ![Dashboard Ruteo](image-2.png) | ![Metricas Forecast](image-3.png) |
+| *Figura 2: Mapa interactivo con semáforo de prioridades.* | *Figura 3: Proyección de stock y KPIs.* |
 
 ---
 
-## 📊 Especificaciones de Datos y Resultados 
+## 📊 Especificaciones de Datos y Resultados Experimentales
 
 ### 4. Diccionario de Datos (Data Dictionary)
-El flujo de datos sigue una arquitectura de medallones estricta. A continuación se detallan los esquemas de los archivos generados.
 
-#### 🥉 Capa Bronze (Ingesta y Detección)
+####  Capa Bronze (Ingesta)
 **Archivo:** `osa_hist_Tambo_UTEC.xlsx` / `osa_resultados.xlsx`
-Contiene los registros históricos y las detecciones crudas del modelo YOLO.
 
 | Columna | Tipo de Dato | Descripción | Ejemplo |
 | :--- | :--- | :--- | :--- |
-| `id` | String | Identificador único de la tienda (SKU/Local). | `TUB0001`, `TCL0001` |
-| `local` | String | Nombre comercial del punto de venta. | "Tambo UTEC", "Tambo Cardenas" |
-| `distrito` | String | Ubicación geográfica administrativa. | "Barranco", "Lince" |
-| `latitud` / `longitud` | Float | Coordenadas geoespaciales (WGS84). | `-12.1358`, `-77.0225` |
-| `productos disponibles`| Integer | **Output YOLO:** Cantidad de objetos detectados. | `22`, `25` |
-| `productos esperados` | Integer | **Input Planograma:** Capacidad ideal de la góndola. | `35`, `21` |
-| `osa` | Float | **KPI:** Disponibilidad ($\frac{Disp}{Esp} \times 100$). | `61.11`, `119.05` |
-| `fecha` | Datetime | Marca temporal del registro. | `2024-01-01` |
+| `id` | String | Identificador único de la tienda. | `TUB0001` |
+| `local` | String | Nombre comercial. | "Tambo UTEC" |
+| `distrito` | String | Ubicación geográfica. | "Barranco" |
+| `productos disponibles`| Integer | **Output YOLO:** Objetos detectados. | `22` |
+| `productos esperados` | Integer | Capacidad del planograma. | `35` |
+| `osa` | Float | KPI de Disponibilidad (%). | `61.11` |
 
-#### 🥈 Capa Silver (Enriquecimiento y Forecast)
-**Archivo:** `osa_hist_Tambo_UTEC_with_forecast.xlsx`
-Extiende la capa Bronze con predicciones a futuro y variables temporales.
-
-| Columna Adicional | Tipo | Descripción |
-| :--- | :--- | :--- |
-| `dow` | Integer | Día de la semana (feature temporal). |
-| `pred_t+1` ... `pred_t+7`| Integer | Predicciones de stock para los siguientes 7 días. |
-
-#### 🥇 Capa Gold (Priorización para Ruteo)
+####  Capa Gold (Priorización)
 **Archivo:** `gold_tiendas_7d.xlsx`
-Datos consolidados listos para el algoritmo de optimización.
 
 | Columna | Descripción | Regla de Negocio |
 | :--- | :--- | :--- |
-| `estrato` | Char (A/B/C/D)| Nivel Socioeconómico o Prioridad Estratégica. |
-| `osa` | Float | Se utiliza el OSA predicho más bajo de la ventana de 7 días. |
+| `estrato` | Char (A/B/C/D) | Nivel Socioeconómico (Peso: 30%). |
+| `osa` | Float | Mínimo OSA predicho a 7 días (Peso: 60%). |
 
----
-
-### 5. Especificaciones del Dataset (Entrenamiento YOLO)
-Para el entrenamiento del modelo de visión computacional se utilizó el dataset **`bbox-retail` (v4 tiled)**, optimizado para entornos de retail.
-
-* **Fuente:** Roboflow Universe.
-* **Volumen de Datos:** 21,492 imágenes en total.
-* **Pre-procesamiento Aplicado:**
-    * *Auto-orientación:* Corrección de metadatos EXIF.
-    * *Redimensionamiento:* 416x416 px (Stretch) para compatibilidad con YOLO.
-    * *Contraste:* Ecualización adaptativa para manejar variaciones de iluminación.
-* **Aumentación de Datos (Data Augmentation):**
-    * Flip Vertical (50% probabilidad).
-    * Rotación aleatoria (entre -10° y +10°).
-    * Ajuste de exposición (±25%).
-
----
+### 5. Especificaciones del Dataset (YOLO)
+Se utilizó el dataset **`bbox-retail` (v4 tiled)** de Roboflow, optimizado para entornos de retail.
+* **Volumen:** 21,492 imágenes.
+* **Pre-procesamiento:** Auto-orientación, Redimensionamiento (416x416), Ecualización de contraste.
+* **Augmentation:** Flip vertical (50%), Rotación (±10°), Exposición (±25%).
 
 ### 6. Análisis de Resultados (Caso de Estudio)
 
-![Resultado Visual del Análisis](image_86c07e.png)
-*Figura: Ejemplo de visualización de datos y proyecciones dentro de la plataforma.*
+![Resultados Generales del Sistema](image-4.png)
+*Figura 4: Panel de resultados consolidado mostrando el estado de la red de tiendas.*
 
-#### 6.1. Validación del Ruteo Inteligente
-Se ejecutó el algoritmo de optimización (`web_ruteo.py`) utilizando los datos de la capa Gold. A continuación se presenta un caso de prueba real extraído de `ruta_sugerida.csv`.
+#### Validación del Ruteo Inteligente
+Se ejecutó el algoritmo de optimización con datos reales (`ruta_sugerida.csv`). El objetivo fue minimizar la distancia ponderada por la urgencia.
 
-* **Criterio:** Minimizar distancia ponderada por urgencia (Prioridad).
+| Orden | ID Tienda | Distrito | Estrato | OSA (%) | Prioridad | Acción Logística |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | `TCLV0001` | La Victoria | **C** | 68.75% | **0.368** | **Visita Inmediata** |
+| **2** | `TUB0665` | Barranco | B | 70.97% | 0.316 | Ruta Eficiente |
+| **3** | `TAM0001` | Miraflores | A | 78.12% | 0.225 | Baja Prioridad |
+| ... | ... | ... | ... | ... | ... | ... |
+| **5** | `TMEA0001` | El Agustino | **D** | **63.33%**| **0.440** | **Máxima Criticidad** |
 
-**Tabla de Resultados de la Optimización:**
+**Interpretación:** El sistema asignó correctamente la **mayor prioridad (0.440)** a la tienda en "El Agustino" (Estrato D, OSA crítico 63%). Sin embargo, el algoritmo de ruteo la colocó al final del itinerario (posición 5) debido a su ubicación lejana, demostrando un balance inteligente entre **Urgencia vs. Eficiencia de Recorrido**.
 
-| Orden | ID Tienda | Local | Distrito | Estrato | OSA (%) | Prioridad | Acción Logística |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | `TCLV0001` | Tambo Canada | La Victoria | **C** | 68.75% | **0.368** | **Visita Inmediata** (Bajo OSA + Estrato Medio) |
-| **2** | `TUB0665` | Tambo UTEC | Barranco | B | 70.97% | 0.316 | Segunda parada (Ruta eficiente) |
-| **3** | `TAM0001` | Tambo Angamos | Miraflores | A | 78.12% | 0.225 | Prioridad baja (Buen stock) |
-| **4** | `TCL0001` | Tambo Cardenas | Lince | B | 72.41% | 0.298 | Visita de mantenimiento |
-| **5** | `TMEA0001` | Tambo Mariategui| El Agustino | **D** | **63.33%**| **0.440** | **Alta Criticidad** (Optimizada por distancia) |
-
-*Fuente: `ruta_sugerida.csv` generado por el sistema.*
-
-**Interpretación:**
-El sistema identificó correctamente a **Tambo Mariategui (Estrato D, OSA 63%)** como la tienda con mayor prioridad (0.440). Sin embargo, el algoritmo la colocó en la posición 5 debido a su ubicación geográfica lejana, demostrando el balance inteligente entre **Urgencia vs. Distancia Recorrida** para maximizar la eficiencia operativa.
-
-#### 6.2. Desempeño del Forecast
-El modelo `ExtraTreesRegressor` demostró capacidad para capturar la tendencia semanal, ajustando las predicciones del día $t+1$ basándose en los lags de $t-7$, lo que permite anticipar la demanda cíclica típica de los fines de semana.
+#### Desempeño del Forecast
+El modelo `ExtraTreesRegressor` demostró capacidad para capturar la tendencia semanal, utilizando los *lags* de $t-7$ para anticipar correctamente los picos de demanda cíclicos (fines de semana) característicos del negocio.
 
 ---
 
-### 7. Conclusiones del Proyecto
-1.  **Automatización Efectiva:** La integración de YOLO v11 permite reducir el tiempo de auditoría de minutos a segundos, eliminando el error humano en el conteo manual.
-2.  **Gestión Proactiva:** El módulo de *Forecasting* transforma la operación de reactiva a proactiva, permitiendo reabastecer tiendas antes de que ocurra el quiebre de stock (OSA < 70%).
-3.  **Eficiencia Logística:** El algoritmo de ruteo no solo reduce kilómetros recorridos, sino que asegura que las tiendas más vulnerables (Estratos C/D con bajo stock) sean atendidas prioritariamente.
+## 7. Conclusiones
+1.  **Automatización Efectiva:** La integración de YOLO permite reducir el tiempo de auditoría de minutos a segundos, eliminando el error humano.
+2.  **Gestión Proactiva:** El módulo de *Forecasting* transforma la operación de reactiva a proactiva, anticipando quiebres de stock.
+3.  **Eficiencia Logística:** El algoritmo prioriza tiendas vulnerables (Estratos C/D con bajo stock) sin sacrificar la eficiencia operativa de la flota.
 
 ---
+
+
+
