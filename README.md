@@ -326,5 +326,8 @@ El desarrollo del sistema **Smart Retail** ha permitido validar la integración 
 3.  **Feedback Loop:** Implementar un mecanismo donde el auditor valide la predicción en sitio para reentrenar el modelo continuamente.
 ---
 
+---
+## . Link de demo: https://youtu.be/_Sbqq336sq0 
 
+---
 
