@@ -43,6 +43,153 @@ El proyecto se fundamenta en investigaciones previas sobre automatización en re
 | **Control de Versiones** | `Git`, `GitHub` |
 
 ---
+# 🚀 Guía de Inicio Rápido (Tutorial)
+
+Sigue estos pasos para configurar el entorno y ejecutar el proyecto completo en tu máquina local.
+
+---
+
+## 1. Estructura del Proyecto
+
+Asegúrate de que tu directorio de trabajo tenga la siguiente estructura para que los scripts localicen los módulos y datos correctamente:
+```bash
+proyecto_dpd/
+├── data/
+│   ├── 1_bronze/          # Almacena históricos crudos (Output de generar_hist_osa...)
+│   ├── 2_silver/          # Almacena data enriquecida con forecast (Output de forecast_utec...)
+│   └── 3_gold/            # Almacena data priorizada para ruteo (Output de genera_data_dummy...)
+├── models/
+│   └── yolo11n.pt         # Modelo YOLO entrenado (necesario para detección)
+├── app.py                 # APLICACIÓN PRINCIPAL (Orquestador)
+├── web_yolo.py            # Módulo: Visión Computacional (Auditoría)
+├── web_ruteo.py           # Módulo: Ruteo Inteligente (Mapas)
+├── stores_meta.py         # Configuración: Diccionario maestro de tiendas
+├── forecast_utec.py       # Script: Motor de Predicción (Machine Learning)
+├── generar_hist_osa_sintetica_clean.py # Script: Generador de datos base
+├── genera_data_dummy.py   # Script: Consolidador de data Gold
+├── requirements.txt       # Lista de dependencias
+└── README.md              # Documentación
+```
+
+---
+
+## 2. Instalación de Entorno y Dependencias
+
+Se recomienda utilizar un entorno virtual con Python 3.10+ para evitar conflictos.
+```bash
+# 1. Crear entorno virtual
+python -m venv venv
+
+# 2. Activar entorno
+# En Windows:
+venv\Scripts\activate
+
+# En Mac/Linux:
+source venv/bin/activate
+
+# 3. Instalar librerías necesarias
+pip install -r requirements.txt
+```
+
+### Contenido sugerido para `requirements.txt`:
+```txt
+streamlit
+pandas
+numpy
+ultralytics
+scikit-learn
+pydeck
+opencv-python-headless
+Pillow
+openpyxl
+pyomo
+```
+
+---
+
+## 3. Ejecución del Pipeline de Datos (Arquitectura de Medallones)
+
+Si es la primera vez que corres el proyecto (o si no tienes datos previos), debes ejecutar los scripts en orden secuencial para poblar las capas de datos:
+
+### Paso 1: Generar Data Histórica (Capa Bronze)
+
+Este script crea el historial simulado de OSA diario basado en los metadatos de las tiendas.
+```bash
+python generar_hist_osa_sintetica_clean.py
+```
+
+**Genera:** `data/1_bronze/osa_hist_Tambo_UTEC.xlsx`
+
+### Paso 2: Entrenar y Predecir (Capa Silver)
+
+Entrena el modelo ExtraTreesRegressor y genera predicciones a 7 días.
+```bash
+python forecast_utec.py
+```
+
+**Genera:** `data/2_silver/osa_hist_Tambo_UTEC_with_forecast.xlsx`
+
+### Paso 3: Consolidar Prioridades (Capa Gold)
+
+Cruza las predicciones con los estratos (NSE) para calcular la prioridad de ruteo final.
+```bash
+python genera_data_dummy.py
+```
+
+**Genera:** `data/3_gold/gold_tiendas_7d.xlsx`
+
+---
+
+## 4. Lanzamiento de la Aplicación
+
+Una vez generados los datos, ejecuta la "SuperApp" que integra los módulos de Visión, Forecast y Ruteo:
+```bash
+streamlit run app.py
+```
+
+Para ejecutar streamlit run app.py debes esatr en la carpeta flujo_completo y el navegador se abrirá automáticamente en `http://localhost:8501`.
+
+- **Menú Lateral:** Navega entre los módulos "Auditoría Visual" (YOLO) y "Ruteo Inteligente" (Mapas).
+- **Prueba Rápida:** Sube una imagen de góndola en la pestaña de Auditoría para ver el conteo en tiempo real.
+
+---
+
+## ✅ Checklist de Verificación
+
+- [ ] Estructura de carpetas creada correctamente
+- [ ] Entorno virtual activado
+- [ ] Dependencias instaladas desde `requirements.txt`
+- [ ] Modelo YOLO descargado en `models/yolo11n.pt`
+- [ ] Scripts ejecutados en orden (Bronze → Silver → Gold)
+- [ ] Aplicación Streamlit corriendo sin errores
+- [ ] Archivos de datos generados en las carpetas correspondientes
+
+---
+
+##  Solución de Problemas Comunes
+
+### Error: "No se encuentra el módulo X"
+**Solución:** Verifica que el entorno virtual esté activado y reinstala dependencias con `pip install -r requirements.txt`
+
+### Error: "No such file or directory: data/1_bronze/..."
+**Solución:** Ejecuta primero el pipeline de datos completo (pasos 1-3) antes de lanzar la app
+
+### Error: "Model not found: models/yolo11n.pt"
+**Solución:** Descarga el modelo YOLO desde Ultralytics o entrena tu propio modelo y colócalo en la carpeta `models/`
+
+### La aplicación no carga datos
+**Solución:** Verifica que existan los archivos Excel en las carpetas `1_bronze`, `2_silver` y `3_gold`
+
+---
+
+## 📚 Recursos Adicionales
+
+- [Documentación de Streamlit](https://docs.streamlit.io)
+- [Ultralytics YOLO Docs](https://docs.ultralytics.com)
+- [Pandas User Guide](https://pandas.pydata.org/docs/user_guide/index.html)
+- [Scikit-learn Documentation](https://scikit-learn.org/stable/documentation.html)
+
+
 
 ##  Arquitectura y Flujo del Proyecto
 
@@ -153,11 +300,30 @@ El modelo `ExtraTreesRegressor` demostró capacidad para capturar la tendencia s
 
 ---
 
-## 7. Conclusiones
-1.  **Automatización Efectiva:** La integración de YOLO permite reducir el tiempo de auditoría de minutos a segundos, eliminando el error humano.
-2.  **Gestión Proactiva:** El módulo de *Forecasting* transforma la operación de reactiva a proactiva, anticipando quiebres de stock.
-3.  **Eficiencia Logística:** El algoritmo prioriza tiendas vulnerables (Estratos C/D con bajo stock) sin sacrificar la eficiencia operativa de la flota.
+## 7. Conclusiones e Insights del Proyecto
 
+El desarrollo del sistema **Smart Retail** ha permitido validar la integración de visión artificial y optimización logística en un entorno de retail real. A continuación se detallan los hallazgos clave:
+
+### 🚀 7.1. Conclusiones Técnicas
+* **Velocidad de Auditoría:** La implementación de **YOLO (v11/v5)** reduce el tiempo de levantamiento de información de inventario de ~15 minutos (conteo manual promedio) a **< 2 segundos** por imagen, eliminando el error humano y la subjetividad en el cálculo del OSA.
+* **Robustez del Pipeline:** La arquitectura de medallones (**Bronze $\to$ Silver $\to$ Gold**) demostró ser esencial para la trazabilidad. La separación de la capa de predicción (Silver) de la capa de decisión logística (Gold) permite ajustar las reglas de negocio (pesos de estratos) sin necesidad de reentrenar los modelos predictivos.
+* **Precisión del Forecast:** El modelo `ExtraTreesRegressor` identificó que la variable más predictiva es el **Lag t-7** (stock de hace una semana), confirmando que la demanda en tiendas como "Tambo UTEC" sigue un patrón altamente estacional y cíclico semanal.
+
+### 💡 7.2. Insights de Negocio y Logística
+* **El Dilema "Urgencia vs. Eficiencia":**
+    El análisis del ruteo reveló un comportamiento interesante del algoritmo: la tienda **Tambo Mariategui (El Agustino)**, a pesar de tener la mayor prioridad crítica (Estrato D, OSA 63%), fue programada al final de la ruta (posición 5).
+    * *Insight:* Esto no es un error, sino una optimización de costes. El algoritmo determinó que visitar primero las tiendas aglomeradas en la zona céntrica (Miraflores, Barranco, Lince) y dejar la más lejana para el final minimiza el kilometraje total de la flota, aunque sacrifique la inmediatez de la tienda más crítica. Esto sugiere un balance costo-beneficio que el negocio debe validar.
+
+* **Impacto de la Estratificación (NSE):**
+    La incorporación del **Nivel Socioeconómico** en la fórmula de prioridad ($w_{estrato}=0.3$) altera significativamente el orden de visita. Sin este factor, el sistema priorizaría solo tiendas grandes con alto quiebre, ignorando tiendas en zonas vulnerables donde el desabastecimiento puede impactar más severamente la lealtad del cliente.
+
+* **Gestión Proactiva vs. Reactiva:**
+    Actualmente, la reposición se basa en "lo que falta hoy". Con el módulo de *Forecasting* (Silver Layer), el sistema permite transicionar a una reposición basada en "lo que faltará mañana", reduciendo la probabilidad de quiebre de stock (Out-of-Stock) antes de que ocurra físicamente.
+
+### 🔮 7.3. Próximos Pasos Recomendados
+1.  **Detección de SKUs específicos:** Entrenar YOLO con clases detalladas (ej. "Coca-Cola 500ml") para granularidad a nivel de producto.
+2.  **Ruteo Dinámico con Tráfico:** Integrar APIs de tráfico en tiempo real (Google Maps/Waze) en el cálculo de la matriz de distancias `haversine` para mejorar la precisión de los tiempos de llegada.
+3.  **Feedback Loop:** Implementar un mecanismo donde el auditor valide la predicción en sitio para reentrenar el modelo continuamente.
 ---
 
 
